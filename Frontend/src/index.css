@@ -1,0 +1,14 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.gradient-text {
+    background: linear-gradient(90deg, #00A896, #02C39A);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+body {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
