@@ -1,7 +1,8 @@
 // In frontend/src/services/teacherService.js
 import axios from 'axios';
 
-const API_URL = 'https://exam-portal-6o7g.onrender.com';
+const API_URL = "https://exam-portal-6o7g.onrender.com/api/";
+
 
 // Get all students (requires teacher token)
 const getStudents = async (token) => {
