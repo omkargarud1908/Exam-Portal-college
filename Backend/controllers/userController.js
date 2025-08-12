@@ -81,21 +81,48 @@ const loginUser = async (req, res) => {
   };
   
 //login teacher
+// const loginTeacher = async (req, res) => {
+//   const { email, password } = req.body;
+//   try {
+//     const user = await User.findOne({ email });
+//     if (user && (await user.matchPassword(password))) {
+//       res.json({
+//         _id: user._id,
+//         name: user.name,
+//         email: user.email,
+//         role: user.role,
+//         token: generateToken(user._id),
+//       });
+//     }
+//   } catch (error) {
+//     res.status(500).json({ message: 'Server Error: ' + error.message });
+//   }
+// };
+
+
+
+
 const loginTeacher = async (req, res) => {
   const { email, password } = req.body;
   try {
-    const user = await User.findOne({ email });
-    if (user && (await user.matchPassword(password))) {
-      res.json({
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        token: generateToken(user._id),
-      });
-    }
+      // 1. Find the user by email in the main User collection
+      const user = await User.findOne({ email });
+
+      // 2. Check if user exists, if the password matches, AND if their role is 'teacher'
+      if (user && user.role === 'teacher' && (await user.matchPassword(password))) {
+          res.json({
+              _id: user._id,
+              name: user.name,
+              email: user.email,
+              role: user.role,
+              token: generateToken(user._id),
+          });
+      } else {
+          // 3. If any of the checks fail, send an "Unauthorized" error
+          res.status(401).json({ message: 'Invalid email or password' });
+      }
   } catch (error) {
-    res.status(500).json({ message: 'Server Error: ' + error.message });
+      res.status(500).json({ message: 'Server Error: ' + error.message });
   }
 };
 
@@ -156,4 +183,110 @@ const updateStudentStatus = async (req, res) => {
 };
   
 
-module.exports = { registerUser, loginUser, getUserProfile, getStudents, updateStudentStatus };
+
+// @desc    Submit answers for an exam
+// @route   POST /api/student/exam/:examId/submit (This route will need to be defined)
+// @access  Private (Student)
+// const submitExam = async (req, res) => {
+//   try {
+//       const { examId } = req.params;
+//       const { answers } = req.body; // The frontend will send this
+//       const studentId = req.user._id; // From our auth middleware
+
+//       // 1. Find the exam to get the correct answers
+//       const exam = await Exam.findById(examId);
+//       if (!exam) {
+//           return res.status(404).json({ message: 'Exam not found' });
+//       }
+
+//       // 2. Check if the student has already submitted this exam
+//       const existingSubmission = await Submission.findOne({ examId, studentId });
+//       if (existingSubmission) {
+//           return res.status(400).json({ message: 'You have already submitted this exam.' });
+//       }
+
+//       // 3. Calculate the score
+//       let score = 0;
+//       const answerMap = new Map(exam.questions.map(q => [q._id.toString(), q.correctAnswer]));
+
+//       answers.forEach(answer => {
+//           if (answerMap.get(answer.questionId) === answer.selectedAnswer) {
+//               score++;
+//           }
+//       });
+
+//       // 4. Create the new submission document
+//       const submission = await Submission.create({
+//           examId,
+//           studentId,
+//           answers,
+//           score,
+//       });
+
+//       // 5. Send back the final result
+//       res.status(201).json({
+//           message: 'Exam submitted successfully!',
+//           score: score,
+//           totalQuestions: exam.questions.length,
+//           submission: submission,
+//       });
+
+//   } catch (error) {
+//       console.error('Error submitting exam:', error);
+//       res.status(500).json({ message: 'Server Error' });
+//   }
+// };
+
+
+//delete student by id
+const deleteStudent = async (req, res) => {
+  try {
+    const student = await User.findByIdAndDelete(req.params.id);
+    res.json({ message: 'Student deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Server Error: ' + error.message });
+  }
+};
+ 
+// @desc    Register a new teacher
+// @route   POST /api/users/add-teacher
+// @access  Private/Teacher
+const addTeacher = async (req, res) => {
+  // 1. Get the data from the request body
+  const { name, email, password } = req.body;
+
+  try {
+      // 2. Check if a user with this email already exists
+      const userExists = await User.findOne({ email });
+
+      if (userExists) {
+          return res.status(400).json({ message: 'A user with this email already exists' });
+      }
+
+      // 3. Create a new user with the role of 'teacher'
+      const user = await User.create({
+          name,
+          email,
+          password,
+          role: 'teacher',
+          status: 'approved', // Teachers are approved by default
+      });
+
+      // 4. If the teacher was created successfully, send back their details
+      if (user) {
+          res.status(201).json({
+              _id: user._id,
+              name: user.name,
+              email: user.email,
+              role: user.role,
+          });
+      } else {
+          res.status(400).json({ message: 'Invalid teacher data' });
+      }
+  } catch (error) {
+      res.status(500).json({ message: 'Server Error: ' + error.message });
+  }
+};
+
+
+module.exports = { registerUser, loginUser, getUserProfile, getStudents, updateStudentStatus, loginTeacher, deleteStudent, addTeacher };

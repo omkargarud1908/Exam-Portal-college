@@ -45,12 +45,20 @@ const getProfile = async (token) => {
   return response.data;
 };
 
+//delete student by id
+const deleteStudent = async (id) => {
+  const response = await axios.delete(API_URL + 'delete-student/' + id);
+  return response.data;
+};
+
 
 const authService = {
   register,
   login,
   logout,
-  getProfile
+  getProfile,
+  deleteStudent
 };
 
 export default authService;
+

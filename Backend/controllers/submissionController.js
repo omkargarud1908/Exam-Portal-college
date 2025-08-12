@@ -11,37 +11,44 @@ const submitTest = async (req, res) => {
         const { testId, answers } = req.body;
         const studentId = req.user._id;
 
-        // First, check if the student has already submitted this test
+        // Check if the student has already submitted this test
         const existingSubmission = await Submission.findOne({ studentId, testId });
         if (existingSubmission) {
             return res.status(400).json({ message: 'You have already submitted this test.' });
         }
 
-        // Fetch the test to get the correct answers for calculating the score
+        // Fetch the test to get the correct answers
         const test = await Test.findById(testId);
         if (!test) {
             return res.status(404).json({ message: 'Test not found' });
         }
 
-        // Calculate the score on the backend for security
+        // Calculate the score on the backend
         let score = 0;
-        test.questions.forEach(question => {
-            // Find the student's answer for this question
-            const studentAnswer = answers.find(a => a.questionId === question._id.toString());
-            if (studentAnswer && studentAnswer.selectedOption === question.correctAnswer) {
+        const answerMap = new Map(test.questions.map(q => [q._id.toString(), q.correctAnswer]));
+        
+        answers.forEach(studentAnswer => {
+            // Use selectedOption to match the frontend's data structure
+            if (answerMap.get(studentAnswer.questionId) === studentAnswer.selectedOption) {
                 score++;
             }
         });
 
-        const submission = new Submission({
+        // Create the submission
+        const submission = await Submission.create({
             studentId,
             testId,
             answers,
             score,
         });
 
-        const createdSubmission = await submission.save();
-        res.status(201).json(createdSubmission);
+        // THE FIX: Send back a clear result object with the score and total questions.
+        res.status(201).json({
+            message: 'Test submitted successfully!',
+            score: score,
+            totalQuestions: test.questions.length,
+            submission: submission,
+        });
 
     } catch (error) {
         console.error(error);

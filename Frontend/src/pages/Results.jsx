@@ -52,7 +52,7 @@ const ResultsPage = () => {
                                 <tbody className="divide-y divide-gray-200">
                                     {submissions.length > 0 ? (
                                         submissions.map((sub) => {
-                                            const totalQuestions = sub.testId.totalMarks / 2; // Assuming 2 marks per question
+                                            const totalQuestions = sub.testId.totalMarks / 1; // Assuming 2 marks per question
                                             const percentage = Math.round((sub.score / totalQuestions) * 100);
                                             let scoreColor = 'text-green-600';
                                             if (percentage < 50) scoreColor = 'text-red-600';

@@ -10,6 +10,7 @@ const AllStudentsPage = () => {
     const [students, setStudents] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
+    const [deleteConfirm, setDeleteConfirm] = useState(null);
 
     useEffect(() => {
         const fetchAllStudents = async () => {
@@ -29,6 +30,25 @@ const AllStudentsPage = () => {
 
         fetchAllStudents();
     }, []);
+
+    const handleDeleteStudent = async (studentId, studentName) => {
+        try {
+            const user = JSON.parse(localStorage.getItem('user'));
+            if (!user || !user.token) {
+                throw new Error('You must be logged in as a teacher.');
+            }
+            
+            await teacherService.deleteStudent(studentId, user.token);
+            
+            // Remove the student from the local state
+            setStudents(students.filter(student => student._id !== studentId));
+            
+            // Close the confirmation dialog
+            setDeleteConfirm(null);
+        } catch (err) {
+            setError((err.response?.data?.message) || err.message || err.toString());
+        }
+    };
 
     if (isLoading) {
         return <div className="p-8 text-center">Loading student data...</div>;
@@ -58,6 +78,7 @@ const AllStudentsPage = () => {
                                         <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600 uppercase tracking-wider">Student Name</th>
                                         <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600 uppercase tracking-wider">PRN</th>
                                         <th className="px-6 py-4 text-center text-sm font-semibold text-gray-600 uppercase tracking-wider">Status</th>
+                                        <th className="px-6 py-4 text-center text-sm font-semibold text-gray-600 uppercase tracking-wider">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-200">
@@ -78,16 +99,51 @@ const AllStudentsPage = () => {
                                                         {student.status}
                                                     </span>
                                                 </td>
+                                                <td className="px-6 py-4 text-center">
+                                                    <button
+                                                        onClick={() => setDeleteConfirm({ id: student._id, name: student.name })}
+                                                        className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-md text-sm font-medium transition-colors duration-200"
+                                                    >
+                                                        Delete
+                                                    </button>
+                                                </td>
                                             </tr>
                                         ))
                                     ) : (
                                         <tr>
-                                            <td colSpan="3" className="text-center py-8 text-gray-500">No students have registered yet.</td>
+                                            <td colSpan="4" className="text-center py-8 text-gray-500">No students have registered yet.</td>
                                         </tr>
                                     )}
                                 </tbody>
                             </table>
                         </div>
+
+                        {/* Delete Confirmation Modal */}
+                        {deleteConfirm && (
+                            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                                <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+                                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Confirm Delete</h3>
+                                    <p className="text-gray-600 mb-6">
+                                        Are you sure you want to delete student <span className="font-semibold">{deleteConfirm.name}</span>? 
+                                        This action cannot be undone.
+                                    </p>
+                                    <div className="flex justify-end space-x-3">
+                                        <button
+                                            onClick={() => setDeleteConfirm(null)}
+                                            className="px-4 py-2 text-gray-600 bg-gray-200 rounded-md hover:bg-gray-300 transition-colors duration-200"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            onClick={() => handleDeleteStudent(deleteConfirm.id, deleteConfirm.name)}
+                                            className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors duration-200"
+                                        >
+                                            Delete
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </motion.div>
                 </main>
             </div>

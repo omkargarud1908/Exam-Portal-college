@@ -1,35 +1,21 @@
+// File: Frondend/pages/StudentDashboard.jsx
+
 import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 import TestCard from '../components/TestCard';
 import testService from '../services/testService';
-
-// Helper function to determine test status
-const getTestStatus = (test) => {
-    const now = new Date();
-    const [startHour, startMinute] = test.startTime.split(':').map(Number);
-    const [endHour, endMinute] = test.endTime.split(':').map(Number);
-    const testDate = new Date(test.date);
-    const startTime = new Date(testDate.getUTCFullYear(), testDate.getUTCMonth(), testDate.getUTCDate(), startHour, startMinute);
-    const endTime = new Date(testDate.getUTCFullYear(), testDate.getUTCMonth(), testDate.getUTCDate(), endHour, endMinute);
-
-    if (now < startTime) {
-        return 'Upcoming';
-    } else if (now >= startTime && now <= endTime) {
-        return 'Live';
-    } else {
-        return 'Completed';
-    }
-};
+import submissionService from '../services/submissionService'; // Import the submission service
 
 const StudentDashboard = () => {
-    const [availableTests, setAvailableTests] = useState([]);
+    const [allTests, setAllTests] = useState([]);
+    const [submittedTestIds, setSubmittedTestIds] = useState(new Set()); // To store IDs of submitted tests
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
     const [studentName, setStudentName] = useState('');
 
     useEffect(() => {
-        const fetchTestsAndUser = async () => {
+        const fetchDashboardData = async () => {
             try {
                 const user = JSON.parse(localStorage.getItem('user'));
                 if (!user || !user.token) {
@@ -38,21 +24,17 @@ const StudentDashboard = () => {
                 
                 setStudentName(user.name);
 
-                const allTests = await testService.getTests(user.token);
+                // THE FIX: Fetch both tests and submissions in parallel
+                const [testsResponse, submissionsResponse] = await Promise.all([
+                    testService.getTests(user.token),
+                    submissionService.getMySubmissions(user.token)
+                ]);
 
-                // --- DEBUGGING LOGS ---
-                console.log("--- DEBUGGING TEST STATUS ---");
-                console.log("Current Time (Your Local):", new Date().toLocaleString());
-                allTests.forEach(test => {
-                    const status = getTestStatus(test);
-                    console.log(`Test: "${test.name}" | Calculated Status: ${status}`);
-                });
-                console.log("-----------------------------");
-                // --- END DEBUGGING ---
-
-                const upcomingOrLiveTests = allTests.filter(test => getTestStatus(test) !== 'Completed');
+                // Create a Set of submitted test IDs for easy lookup
+                const submittedIds = new Set(submissionsResponse.map(sub => sub.testId._id));
                 
-                setAvailableTests(upcomingOrLiveTests);
+                setAllTests(testsResponse);
+                setSubmittedTestIds(submittedIds);
 
             } catch (err) {
                 setError((err.response?.data?.message) || err.message || err.toString());
@@ -61,11 +43,11 @@ const StudentDashboard = () => {
             }
         };
 
-        fetchTestsAndUser();
+        fetchDashboardData();
     }, []);
 
     if (isLoading) {
-        return <div className="p-8 text-center">Loading available tests...</div>;
+        return <div className="p-8 text-center">Loading dashboard...</div>;
     }
 
     if (error) {
@@ -82,17 +64,21 @@ const StudentDashboard = () => {
                         <h2 className="text-3xl font-bold text-gray-800 mb-8 text-center">
                             Available Tests
                         </h2>
-                        {availableTests.length > 0 ? (
+                        {allTests.length > 0 ? (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                                {availableTests.map(test => (
-                                    <TestCard key={test._id} test={test} />
+                                {allTests.map(test => (
+                                    // THE FIX: Pass the 'isSubmitted' prop to the TestCard
+                                    <TestCard 
+                                        key={test._id} 
+                                        test={test} 
+                                        isSubmitted={submittedTestIds.has(test._id)} 
+                                    />
                                 ))}
                             </div>
                         ) : (
                              <div className="text-center py-12 bg-white rounded-2xl shadow-lg">
-                                <p className="text-gray-500 text-lg">No tests are available at the moment.</p>
-                                <p className="text-gray-400 text-sm mt-2">(Completed tests are hidden)</p>
-                            </div>
+                                 <p className="text-gray-500 text-lg">No tests are available at the moment.</p>
+                             </div>
                         )}
                     </div>
                 </main>

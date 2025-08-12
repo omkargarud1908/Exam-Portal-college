@@ -1,3 +1,5 @@
+// File: Frondend/pages/MCQTestPage.jsx
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -10,41 +12,24 @@ const CheckCircleIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className=
 const CheckIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-600" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>;
 const XIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-600" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" /></svg>;
 
+
 const MCQTestPage = () => {
     const navigate = useNavigate();
     const { testId } = useParams();
     
+    // --- State Management ---
     const [testData, setTestData] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
-    
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
     const [answers, setAnswers] = useState({});
     const [timeLeft, setTimeLeft] = useState(0);
     const [showSubmitModal, setShowSubmitModal] = useState(false);
-    const [isTestSubmitted, setIsTestSubmitted] = useState(false);
+    
+    // This state will hold the final result received from the backend
+    const [finalResult, setFinalResult] = useState(null);
 
-    const handleSubmitTest = useCallback(() => {
-        setIsTestSubmitted(prevState => {
-            if (prevState) return true;
-            
-            const formattedAnswers = Object.entries(answers).map(([questionId, selectedOption]) => ({
-                questionId,
-                selectedOption,
-            }));
-
-            const submissionData = { testId, answers: formattedAnswers };
-            const user = JSON.parse(localStorage.getItem('user'));
-
-            submissionService.submitTest(submissionData, user.token)
-                .catch(err => console.error("Submission failed:", err));
-
-            setShowSubmitModal(false);
-            return true;
-        });
-    }, [answers, testId]);
-
-    // Fetch Test Data
+    // --- Fetch Test Data ---
     useEffect(() => {
         const fetchTest = async () => {
             try {
@@ -70,20 +55,42 @@ const MCQTestPage = () => {
         fetchTest();
     }, [testId]);
 
-    // Countdown Timer Logic
+    // --- Test Submission Logic (Corrected) ---
+    const handleSubmitTest = useCallback(async () => {
+        if (finalResult) return; // Prevent re-submission
+
+        setIsLoading(true);
+        setShowSubmitModal(false);
+        try {
+            const formattedAnswers = Object.entries(answers).map(([questionId, selectedOption]) => ({
+                questionId,
+                selectedOption,
+            }));
+            const submissionData = { testId, answers: formattedAnswers };
+            const user = JSON.parse(localStorage.getItem('user'));
+            
+            // The API call now returns the full result from the backend
+            const resultData = await submissionService.submitTest(submissionData, user.token);
+            setFinalResult(resultData); // Store the entire result object
+        } catch (err) {
+            setError(err.response?.data?.message || 'Failed to submit the test.');
+        } finally {
+            setIsLoading(false);
+        }
+    }, [answers, testId, finalResult]);
+
+    // --- Countdown Timer Logic ---
     useEffect(() => {
-        if (isTestSubmitted || !testData || timeLeft <= 0) {
-            if (testData && !isTestSubmitted) {
+        if (finalResult || !testData || timeLeft <= 0) {
+            if (testData && !finalResult) {
                 alert("Time is up! Your test has been submitted automatically.");
-                handleSubmitTest();
+                handleSubmitTest(); // Auto-submit when time runs out
             }
             return;
         }
         const timer = setInterval(() => setTimeLeft(prev => prev - 1), 1000);
         return () => clearInterval(timer);
-    }, [timeLeft, testData, isTestSubmitted, handleSubmitTest]);
-
-    // --- THE FULLSCREEN AND VISIBILITY CHANGE useEffect HAS BEEN REMOVED ---
+    }, [timeLeft, testData, finalResult, handleSubmitTest]);
 
     const formatTime = (seconds) => {
         const minutes = Math.floor(seconds / 60);
@@ -110,12 +117,11 @@ const MCQTestPage = () => {
     if (isLoading) return <div className="p-8 text-center">Loading test...</div>;
     if (error) return <div className="p-8 text-center text-red-500">Error: {error}</div>;
 
-    if (isTestSubmitted) {
-        let score = 0;
-        testData.questions.forEach(q => {
-            if (answers[q._id] === q.correctAnswer) score++;
-        });
-        const percentage = Math.round((score / testData.questions.length) * 100);
+    // --- Results View (Corrected to use backend data) ---
+    if (finalResult) {
+        // The score and total questions are taken directly from the backend response
+        const { score, totalQuestions } = finalResult;
+        const percentage = totalQuestions > 0 ? Math.round((score / totalQuestions) * 100) : 0;
 
         return (
             <div className="min-h-screen bg-gray-50 p-8 font-sans">
@@ -125,7 +131,7 @@ const MCQTestPage = () => {
                         <p className="mt-2 text-lg text-gray-600">Here's your performance for the {testData.name} test.</p>
                         <div className="mt-8">
                             <span className="text-6xl font-bold text-blue-600">{percentage}%</span>
-                            <p className="mt-2 text-xl font-semibold text-gray-700">You scored {score} out of {testData.questions.length}</p>
+                            <p className="mt-2 text-xl font-semibold text-gray-700">You scored {score} out of {totalQuestions}</p>
                         </div>
                     </div>
                     <div className="mt-10 text-center">
@@ -184,7 +190,7 @@ const MCQTestPage = () => {
                             <p className="text-gray-600 mt-2 mb-6">You have answered {Object.keys(answers).length} of {testData.questions.length} questions. You cannot change your answers after this.</p>
                             <div className="flex justify-center gap-4">
                                 <button onClick={() => setShowSubmitModal(false)} className="px-8 py-2 font-semibold text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300">Cancel</button>
-                                <button onClick={() => handleSubmitTest()} className="px-8 py-2 font-bold text-white bg-green-600 rounded-lg hover:bg-green-700">Confirm & Submit</button>
+                                <button onClick={handleSubmitTest} className="px-8 py-2 font-bold text-white bg-green-600 rounded-lg hover:bg-green-700">Confirm & Submit</button>
                             </div>
                         </motion.div>
                     </motion.div>

@@ -90,7 +90,7 @@ const AdminDashboard = () => {
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                             <StatCard title="Pending Approvals" value={stats.pendingApprovals} icon={<ClockIcon />} color="border-yellow-500" linkTo="/admin/StudentApprovalsPage" />
                             {/* --- THIS IS THE ONLY CHANGE --- */}
-                            <StatCard title="Total Students" value={stats.totalStudents} icon={<UsersIcon />} color="border-green-500" linkTo="/admin/AllStudentsPage" />
+                            <StatCard title="Total Students" value={stats.totalStudents} icon={<UsersIcon />} color="border-green-500" linkTo="/admin/all-students" />
                             <StatCard title="Total Tests Created" value={stats.totalTests} icon={<TestIcon />} color="border-blue-500" linkTo="/admin/manage-tests" />
                         </div>
 
