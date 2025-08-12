@@ -1,7 +1,8 @@
 // In frontend/src/services/submissionService.js
 import axios from 'axios';
 
-const API_URL = 'https://exam-portal-6o7g.onrender.com';
+const API_URL = "https://exam-portal-6o7g.onrender.com/api/";
+
 
 // Save a new test submission
 const submitTest = async (submissionData, token) => {
