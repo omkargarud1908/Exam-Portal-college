@@ -1,40 +1,30 @@
-// In frontend/src/services/authService.js
-
+// frontend/src/services/authService.js
 import axios from 'axios';
 
-// The base URL for our user-related API endpoints
-// This comes from the "proxy" we set in package.json
-const API_URL = "https://exam-portal-6o7g.onrender.com/api/";
+// ✅ Base API URL without /api/
+const API_URL = "https://exam-portal-6o7g.onrender.com/";
 
-// Register user function
+// Register
 const register = async (userData) => {
-  // Make the POST request to the signup endpoint
   const response = await axios.post(API_URL + 'signup', userData);
-
-  // axios puts the server's response in the `data` property
   return response.data;
 };
 
-
-// Login user function
+// Login
 const login = async (userData) => {
   const response = await axios.post(API_URL + 'login', userData);
-
-  // If login is successful, the response will include user data and a token.
-  // We should store this in localStorage so the user stays logged in.
   if (response.data) {
     localStorage.setItem('user', JSON.stringify(response.data));
   }
-
   return response.data;
 };
 
+// Logout
 const logout = () => {
   localStorage.removeItem('user');
 };
 
-
-// Get user profile
+// Get profile
 const getProfile = async (token) => {
   const config = {
     headers: {
@@ -45,12 +35,11 @@ const getProfile = async (token) => {
   return response.data;
 };
 
-//delete student by id
+// Delete student
 const deleteStudent = async (id) => {
   const response = await axios.delete(API_URL + 'delete-student/' + id);
   return response.data;
 };
-
 
 const authService = {
   register,
@@ -61,4 +50,3 @@ const authService = {
 };
 
 export default authService;
-
