@@ -1,7 +1,7 @@
 // In frontend/src/services/testService.js
 import axios from 'axios';
 
-const API_URL = "https://exam-portal-6o7g.onrender.com/api/";
+const API_URL = "https://exam-portal-6o7g.onrender.com/api/submissions";
 
 // Create a new test
 const createTest = async (testData, token) => {
