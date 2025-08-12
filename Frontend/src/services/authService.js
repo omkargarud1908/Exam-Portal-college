@@ -4,8 +4,7 @@ import axios from 'axios';
 
 // The base URL for our user-related API endpoints
 // This comes from the "proxy" we set in package.json
-const API_URL = 'https://exam-portal-6o7g.onrender.com';
-
+const API_URL = "https://exam-portal-6o7g.onrender.com";
 
 // Register user function
 const register = async (userData) => {
